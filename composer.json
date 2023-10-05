@@ -12,7 +12,7 @@
     "prefer-stable": true,
     "autoload": {
         "psr-4": {
-            "Totoprayogo1916\\CodeigniterAdditional\\": "src/"
+            "Totoprayogo1916\\CodeIgniter\\Additionals\\": "src/"
         }
     },
     "config": {
