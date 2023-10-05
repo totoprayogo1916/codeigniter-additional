@@ -1,6 +1,6 @@
 <?php
 
-namespace Totoprayogo1916\CodeIgniter\Additionals\Commands;
+namespace Totoprayogo1916\Additionals\CodeIgniter\Commands;
 
 use CodeIgniter\CLI\BaseCommand;
 use CodeIgniter\CLI\CLI;
