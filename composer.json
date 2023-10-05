@@ -1,0 +1,27 @@
+{
+    "name": "totoprayogo1916/codeigniter-additional",
+    "license": "MIT",
+    "type": "library",
+    "require": {
+        "codeigniter4/framework": "^4.4"
+    },
+    "require-dev": {
+        "codeigniter4/devkit": "^1.1"
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true,
+    "autoload": {
+        "psr-4": {
+            "Totoprayogo1916\\CodeigniterAdditional\\": "src/"
+        }
+    },
+    "config": {
+        "allow-plugins": {
+            "phpstan/extension-installer": false
+        }
+    },
+    "scripts": {
+        "cs": "php-cs-fixer fix --ansi --verbose --dry-run --diff",
+        "cs-fix": "php-cs-fixer fix --ansi --verbose --diff"
+    }
+}
