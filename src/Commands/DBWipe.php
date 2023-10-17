@@ -57,7 +57,7 @@ class DBWipe extends BaseCommand
     {
         $baseConnection = Database::connect();
         $tables         = $baseConnection->listTables();
-        $forge          = \Config\Database::forge();
+        $forge          = Database::forge();
 
         foreach ($tables as $table) {
             $forge->dropTable($table);
