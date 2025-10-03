@@ -12,7 +12,7 @@ class SessionsClear extends BaseCommand
      *
      * @var string
      */
-    protected $group = 'Sessions';
+    protected $group = 'Housekeeping';
 
     /**
      * The Command's Name
@@ -56,7 +56,7 @@ class SessionsClear extends BaseCommand
     {
         helper('directory');
 
-        $sessionPath = WRITEPATH . 'sessions' . DIRECTORY_SEPARATOR;
+        $sessionPath = WRITEPATH . 'session' . DIRECTORY_SEPARATOR;
 
         if (! is_dir($sessionPath)) {
             CLI::write(CLI::color('Session path does not exist, nothing to clear.', 'yellow'));
