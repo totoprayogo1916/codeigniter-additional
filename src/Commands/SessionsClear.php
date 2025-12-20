@@ -4,88 +4,131 @@ namespace Totoprayogo1916\Additionals\CodeIgniter\Commands;
 
 use CodeIgniter\CLI\BaseCommand;
 use CodeIgniter\CLI\CLI;
+use Config\Services;
 
 class SessionsClear extends BaseCommand
 {
-    /**
-     * The Command's Group
-     *
-     * @var string
-     */
-    protected $group = 'Housekeeping';
+    protected $group       = 'Housekeeping';
+    protected $name        = 'session:clear';
+    protected $description = 'Hapus data session (support --force dan --expired)';
 
-    /**
-     * The Command's Name
-     *
-     * @var string
-     */
-    protected $name = 'sessions:clear';
+    protected $usage = 'session:clear [options]';
+    protected $options = [
+        '--force'   => 'Wajib. Konfirmasi penghapusan session',
+        '--expired' => 'Hanya hapus session yang sudah expired',
+    ];
 
-    /**
-     * The Command's Description
-     *
-     * @var string
-     */
-    protected $description = 'Clear all session files.';
-
-    /**
-     * The Command's Usage
-     *
-     * @var string
-     */
-    protected $usage = 'sessions:clear';
-
-    /**
-     * The Command's Arguments
-     *
-     * @var array
-     */
-    protected $arguments = [];
-
-    /**
-     * The Command's Options
-     *
-     * @var array
-     */
-    protected $options = [];
-
-    /**
-     * Actually execute a command.
-     */
     public function run(array $params)
     {
-        helper('directory');
+        $force   = array_key_exists('force', $params);
+        $expired = array_key_exists('expired', $params);
 
-        $sessionPath = WRITEPATH . 'session' . DIRECTORY_SEPARATOR;
-
-        if (! is_dir($sessionPath)) {
-            CLI::write(CLI::color('Session path does not exist, nothing to clear.', 'yellow'));
-
+        if (! $force) {
+            CLI::error('Gunakan --force untuk menjalankan command ini');
+            CLI::write('Contoh:', 'yellow');
+            CLI::write('php spark session:clear --force');
+            CLI::write('php spark session:clear --expired --force');
             return;
         }
 
-        $files = directory_map($sessionPath, 1);
+        $driver = config('Session')->driver;
 
-        if (empty($files)) {
-            CLI::write(CLI::color('No session files to clear.', 'green'));
+        CLI::write('Session driver : ' . $driver, 'yellow');
+        CLI::write('Mode           : ' . ($expired ? 'Expired only' : 'ALL'), 'yellow');
 
-            return;
+        switch ($driver) {
+
+            case 'CodeIgniter\Session\Handlers\FileHandler':
+                $this->clearFileSession($expired);
+                break;
+
+            case 'CodeIgniter\Session\Handlers\DatabaseHandler':
+                $this->clearDatabaseSession($expired);
+                break;
+
+            case 'CodeIgniter\Session\Handlers\RedisHandler':
+                $this->clearRedisSession($expired);
+                break;
+
+            default:
+                CLI::error('Driver session tidak didukung');
+                return;
         }
 
-        $clearedCount = 0;
+        CLI::write('✔ Session cleanup selesai', 'green');
+    }
 
-        foreach ($files as $file) {
-            if (is_file($sessionPath . $file)) {
-                if ($file === 'index.html' || strpos($file, '.') === 0) {
+    /* =====================================================
+     * FILE SESSION
+     * ===================================================== */
+    protected function clearFileSession(bool $expired)
+    {
+        $path     = config('Session')->savePath;
+        $lifetime = config('Session')->expiration;
+        $prefix = config('Session')->cookieName;
+
+        $now   = time();
+        $count = 0;
+
+        foreach (glob($path . '/' . $prefix . '*') as $file) {
+
+            if ($expired) {
+                if (($now - filemtime($file)) < $lifetime) {
                     continue;
                 }
-
-                if (unlink($sessionPath . $file)) {
-                    $clearedCount++;
-                }
             }
+
+            @unlink($file);
+            $count++;
         }
 
-        CLI::write(CLI::color("Cleared {$clearedCount} session file(s) successfully.", 'green'));
+        CLI::write("File session dihapus: {$count}");
+    }
+
+    /* =====================================================
+     * DATABASE SESSION
+     * ===================================================== */
+    protected function clearDatabaseSession(bool $expired)
+    {
+        $db    = db_connect();
+        $table = config('Session')->savePath;
+
+        if ($expired) {
+            $db->query("
+                DELETE FROM {$table}
+                WHERE timestamp < UNIX_TIMESTAMP() - ?
+            ", [config('Session')->expiration]);
+
+            $count = $db->affectedRows();
+        } else {
+            $db->table($table)->truncate();
+            $count = 'ALL';
+        }
+
+        CLI::write("Database session dihapus: {$count}");
+    }
+
+    /* =====================================================
+     * REDIS SESSION
+     * ===================================================== */
+    protected function clearRedisSession(bool $expired)
+    {
+        $redis  = Services::redis();
+        $prefix = config('Session')->cookieName ?? 'ci_session';
+        $keys   = $redis->keys($prefix . '*');
+
+        $count = 0;
+
+        foreach ($keys as $key) {
+
+            if ($expired && $redis->ttl($key) > 0) {
+                continue;
+            }
+
+            $redis->del($key);
+            $count++;
+        }
+
+        CLI::write("Redis session dihapus: {$count}");
     }
 }
