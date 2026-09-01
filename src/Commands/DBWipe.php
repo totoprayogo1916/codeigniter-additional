@@ -27,7 +27,7 @@ class DBWipe extends BaseCommand
      *
      * @var string
      */
-    protected $description = 'Drop all tables';
+    protected $description = 'Drop all tables and views';
 
     /**
      * The Command's Usage
@@ -60,9 +60,32 @@ class DBWipe extends BaseCommand
         $forge          = Database::forge();
 
         foreach ($tables as $table) {
-            $forge->dropTable($table);
+            $query = $baseConnection->query(
+                'SHOW FULL TABLES WHERE Tables_in_' . $baseConnection->database . ' = ?',
+                [$table]
+            );
+
+            $result = $query->getRowArray();
+
+            if ($result === null) {
+                continue;
+            }
+
+            $tableType = end($result);
+
+            if ($tableType === 'VIEW') {
+                $baseConnection->query(
+                    'DROP VIEW IF EXISTS `' . str_replace('`', '``', $table) . '`'
+                );
+
+                CLI::write('Dropped view: ' . $table);
+            } else {
+                $forge->dropTable($table, true);
+
+                CLI::write('Dropped table: ' . $table);
+            }
         }
 
-        CLI::write(CLI::color('Dropped all tables successfully.', 'green'));
+        CLI::write(CLI::color('Dropped all tables and views successfully.', 'green'));
     }
 }
